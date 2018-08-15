@@ -131,3 +131,18 @@ class OSDPClass:
             (binds=['/home/user/environments/osdp/osdp/projects/ghettolabs/docker:/var/task',]))
             dockerpty.start(client, container_id)
 
+    def stop(self, projectname):
+        dataMap = self.get_settings()
+        current_directory = os.getcwd()
+        data_folder = Path("osdp")
+        file_to_open = data_folder / "projects" / projectname / "vagrant"
+        final_directory = os.path.join(current_directory, file_to_open)
+        if not os.path.exists(final_directory):
+            os.makedirs(final_directory)
+        vagrant_folder = Path(final_directory)
+        v = vagrant.Vagrant(vagrant_folder, quiet_stdout=False)
+        v.halt()
+
+    def update(self):
+        self.new()
+
