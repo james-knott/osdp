@@ -7,6 +7,7 @@ import logging
 import sys
 from ruamel.yaml import YAML
 import argparse
+import os
 
 __author__ = "James Knott (@Ghettolabs)"
 __copyright__ = "Copyright 2018 James Knott"
@@ -43,3 +44,9 @@ if __name__ == "__main__":
     parser.add_argument("--stop","-d", required=False,dest='stop',action='store',help='Stop services')
 
     result = parser.parse_args()
+    test = osdpclass.OSDPClass()
+    if result.init:
+        logger.info("Pulling down yaml file so you can customize your environment!")
+        test.init()
+
+
