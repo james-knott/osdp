@@ -49,3 +49,38 @@ class OSDPClass:
         else:
             print("Network connection is down")
 
+    def new(self):
+        dataMap = self.get_settings()
+        current_directory = os.getcwd()
+        data_folder = Path("osdp")
+        if dataMap['osdp']['platform'] == 'vagrant':
+            file_to_open = data_folder / "projects" / dataMap['osdp']['project'] / "vagrant"
+            final_directory = os.path.join(current_directory, file_to_open)
+        elif dataMap['osdp']['platform'] == 'docker':
+            file_to_open = data_folder / "projects" / dataMap['osdp']['project'] / "docker"
+            final_directory = os.path.join(current_directory, file_to_open)
+        if os.path.exists(final_directory):
+            self.logger.info("A project with that name already exists!")
+            self.backup()
+            try:
+                shutil.rmtree(final_directory, onerror=onerror)
+                self.logger.info("The folder has been removed.!")
+            except:
+                self.logger.info("The folder could  not be removed.!")
+        else:
+            os.makedirs(final_directory)
+        if dataMap['osdp']['linux'] not in self.linux:
+            self.logger.info("The linux distro you selected is not supported yet!")
+            self.logger.info("Go back into the settings.yml file and assign the linux key: ubuntu, centos, amazon, debian, dcos-vagrant !")
+            sys.exit(1)
+        url = "https://github.com/james-knott/" + dataMap['osdp']['linux'] + ".git"
+        self.logger.info("Downloading project files!")
+        Repo.clone_from(url, final_directory , branch="master")
+        if dataMap['osdp']['platform'] == 'docker':
+            IMG_SRC = dataMap['osdp']['dockerdeveloperimage']
+            client = docker.Client()
+            client.login(username=dataMap['osdp']['dockerhubusername'], password=dataMap['osdp']['dockerhubpassword'], registry="https://index.docker.io/v1/")
+            client.pull(IMG_SRC)
+            client.tag(image=dataMap['osdp']['dockerdeveloperimage'], repository=dataMap['osdp']['pushto'],tag=dataMap['osdp']['runtime'])
+
+
