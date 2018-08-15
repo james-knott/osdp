@@ -83,4 +83,51 @@ class OSDPClass:
             client.pull(IMG_SRC)
             client.tag(image=dataMap['osdp']['dockerdeveloperimage'], repository=dataMap['osdp']['pushto'],tag=dataMap['osdp']['runtime'])
 
+    def zipfolder(self):
+        dt = datetime.datetime.now()
+        datestring = dt.strftime('%m/%d/%Y')
+        foldername = "osdpbackup"
+        target_dir = os.getcwd()
+        zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
+        rootlen = len(target_dir) + 1
+        for base, dirs, files in os.walk(target_dir):
+            for file in files:
+                fn = os.path.join(base, file)
+                zipobj.write(fn, fn[rootlen:])
+
+
+    def start(self, projectname):
+        dataMap = self.get_settings()
+        current_directory = os.getcwd()
+        data_folder = Path("osdp")
+        file_to_open = data_folder / "projects" / dataMap['osdp']['project'] / dataMap['osdp']['platform']
+        final_directory = os.path.join(current_directory, file_to_open)
+        if not os.path.exists(final_directory):
+            print("This should have already been created")
+            exit()
+        if dataMap['osdp']['platform'] == 'vagrant':
+            vagrant_folder = Path(final_directory)
+            v = vagrant.Vagrant(vagrant_folder, quiet_stdout=False)
+            try:
+                v.up()
+            except Exception as e:
+                pass
+            os.chdir(vagrant_folder)
+            cmdCommand = "vagrant port"
+            process = subprocess.Popen(cmdCommand.split(), stdout=subprocess.PIPE)
+            output, error = process.communicate()
+            print(output)
+        elif dataMap['osdp']['platform'] == 'docker':
+            print("Ths platform is docker and we will connect to the image")
+            os.chdir(final_directory)
+            retval = os.getcwd()
+            IMG_SRC = dataMap['osdp']['dockerdeveloperimage']
+            client = docker.Client()
+            client.login(username=dataMap['osdp']['dockerhubusername'], password=dataMap['osdp']['dockerhubpassword'], registry="https://index.docker.io/v1/")
+            client.pull(IMG_SRC)
+            client.tag(image=dataMap['osdp']['dockerdeveloperimage'], repository=dataMap['osdp']['pushto'],tag=dataMap['osdp']['runtime'])
+            response = [line for line in client.push(dataMap['osdp']['pushto'] + ":" + dataMap['osdp']['runtime'], stream=True)]
+            container_id = client.create_container('buildmystartup/ghettolabs:python3.6',stdin_open=True,tty=True,command='/bin/bash', volumes=['/home/user/environments/osdp/osdp/projects/ghettolabs/docker'],host_config=client.create_host_config \
+            (binds=['/home/user/environments/osdp/osdp/projects/ghettolabs/docker:/var/task',]))
+            dockerpty.start(client, container_id)
 
